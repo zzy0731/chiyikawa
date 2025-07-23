@@ -45,7 +45,7 @@ def draw_obstacle(x, y):
     screen.blit(tako_image, (x, y))
     # pygame.draw.circle(screen, RED, (x + obstacle_size // 2, y + obstacle_size // 2), obstacle_size // 2)
 
-def show_game_over(): 
+def show_game_over():
     font = pygame.font.Font("Fonts/msjh.ttc", 24)#本文主角
     text = font.render("兩周年快樂寶寶!", True, (0, 0, 0))
     rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
@@ -111,6 +111,3 @@ while running:
     clock.tick(60)
 
 pygame.quit()
-
-#test in the final 
-#test 2 
