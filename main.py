@@ -2,15 +2,17 @@
 import pygame
 import random
 import sys
-
+from messages import love_messages
+from function import *
 # 初始化
 pygame.init()
 
 # 畫面尺寸
 WIDTH, HEIGHT = 500, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
-pygame.display.set_caption("Sheep chiikawa game")
-
+pygame.display.set_caption("Love Sheep Game")
+background = pygame.image.load("assets/background.png")
+background = pygame.transform.scale(background, (500, 600))
 # 顏色
 WHITE = (255, 255, 255)
 BLUE = (100, 150, 255)
@@ -27,37 +29,51 @@ obstacle_size = 30
 obstacle_speed = 5
 obstacles = []
 
+# 信件參數
+letter_size = 40
+letter_speed = 3
+letters = []
+
+current_message = ""
+message_timer = 0
+
 # 遊戲時鐘
 clock = pygame.time.Clock()
 
 # 字型
-font = pygame.font.SysFont(None, 48)
+font = pygame.font.SysFont(None, 32)
+font = pygame.font.Font("Fonts/msjh.ttc", 24)#本文主角
 
 def draw_player(x, y):
     player_img = pygame.image.load("assets/player.png")
     player_img = pygame.transform.scale(player_img, (player_size, player_size))
     screen.blit(player_img, (x, y))
-    # pygame.draw.rect(screen, BLUE, (x, y, player_size, player_size))
 
 def draw_obstacle(x, y):
     tako_image = pygame.image.load("assets/tako.png")
     tako_image = pygame.transform.scale(tako_image, (obstacle_size, obstacle_size))
     screen.blit(tako_image, (x, y))
-    # pygame.draw.circle(screen, RED, (x + obstacle_size // 2, y + obstacle_size // 2), obstacle_size // 2)
+
+def draw_letter(x, y, text):
+    letter_image = pygame.image.load("assets/love_letter.png")
+    screen.blit(letter_image, (x, y))
 
 def show_game_over():
-    font = pygame.font.Font("Fonts/msjh.ttc", 24)#本文主角
-    text = font.render("兩周年快樂寶寶!", True, (0, 0, 0))
+    text = font_big.render("兩周年快樂寶寶!", True, (0, 0, 0))
     rect = text.get_rect(center=(WIDTH // 2, HEIGHT // 2))
     screen.blit(text, rect)
     pygame.display.update()
     pygame.time.wait(2000)
 
-
 def draw_score():
     score_text = font.render(f"Score: {score}", True, (0, 0, 0))
     screen.blit(score_text, (10, 10))
 
+def draw_message():
+    if current_message:
+        message_text = font.render(current_message, True, (255, 0, 100))
+        rect = message_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
+        screen.blit(message_text, rect)
 
 
 score = 0
@@ -70,7 +86,7 @@ while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
-
+    screen.blit(background, (0,0))
     # 鍵盤控制
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT] and player_x > 0:
@@ -83,13 +99,18 @@ while running:
         obstacle_x = random.randint(0, WIDTH - obstacle_size)
         obstacles.append([obstacle_x, 0])
 
+    # 生出信件
+    if random.random() < 0.02:
+        letter_x = random.randint(0, WIDTH - letter_size)
+        text = random.choice(love_messages)
+        letters.append([letter_x, 0, text])
+
     # 更新障礙物位置
     new_obstacles = []
     for x, y in obstacles:
         y += obstacle_speed
         if y < HEIGHT:
             new_obstacles.append([x, y])
-        # 碰撞偵測
         if (player_x < x + obstacle_size and
             player_x + player_size > x and
             player_y < y + obstacle_size and
@@ -99,14 +120,35 @@ while running:
             sys.exit()
     obstacles = new_obstacles
 
-    # 畫出角色和障礙物
+    # 更新信件位置
+    new_letters = []
+    for x, y, text in letters:
+        y += letter_speed
+        if y < HEIGHT:
+            new_letters.append([x, y, text])
+        if (player_x < x + letter_size and
+            player_x + player_size > x and
+            player_y < y + letter_size and
+            player_y + player_size > y):
+            current_message = text
+            message_timer = pygame.time.get_ticks()
+            score += 10  # 碰到信件加分
+    letters = new_letters
+
+    # 顯示訊息 2 秒後消失
+    if current_message and pygame.time.get_ticks() - message_timer > 2000:
+        current_message = ""
+
+    # 畫出角色、障礙物、信件
     draw_player(player_x, player_y)
-    score +=1
+    score += 1
     draw_score()
+    draw_message()
     for x, y in obstacles:
         draw_obstacle(x, y)
-        
-    
+    for x, y, text in letters:
+        draw_letter(x, y, text)
+
     pygame.display.update()
     clock.tick(60)
 
