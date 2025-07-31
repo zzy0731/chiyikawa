@@ -15,7 +15,7 @@ WIDTH, HEIGHT = 500, 600
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Love Sheep Game")
 background = pygame.image.load("assets/background.png")
-background = pygame.transform.scale(background, (500, 600))
+background = pygame.transform.scale(background, (WIDTH, HEIGHT))
 # 顏色
 WHITE = (255, 255, 255)
 BLUE = (100, 150, 255)
@@ -49,10 +49,14 @@ message_timer = 0
 clock = pygame.time.Clock()
 
 # 字型
-font = pygame.font.SysFont(None, 32)
+# font = pygame.font.SysFont(None, 32)
 font = pygame.font.Font("Fonts/msjh.ttc", 24)#本文主角
 player_img = pygame.image.load("assets/player.png")
 player_img = pygame.transform.scale(player_img, (player_size, player_size))
+
+lobster_img = pygame.image.load("assets/lobster_resize.png")
+
+player_img_list = [player_img, lobster_img]
 
 tako_image = pygame.image.load("assets/tako.png")
 tako_image = pygame.transform.scale(tako_image, (obstacle_size, obstacle_size))
@@ -61,9 +65,83 @@ letter_image = pygame.image.load("assets/love_letter.png")
 
 Drop_HP_icon = pygame.image.load("assets/heart_resize.png")
 HP_icon = pygame.image.load("assets/heart_resize.png")
+difficulty = "Normal"
 
-def draw_player(x, y):
-    screen.blit(player_img, (x, y))
+def show_start_screen():
+    """顯示遊戲初始畫面 + 難度選擇"""
+    selected = 1  # 0: Easy, 1: Normal, 2: Hard
+    global difficulty
+    while True:
+        screen.blit(background, (0, 0))
+        title_font = pygame.font.Font("Fonts/msjh.ttc", 40)
+        start_font = pygame.font.Font("Fonts/msjh.ttc", 28)
+        
+        title_text = title_font.render("Love Sheep Game", True, (255, 0, 100))
+        title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
+        screen.blit(title_text, title_rect)
+        
+        # 難度選項
+        difficulties = ["Easy", "Normal", "Hard"]
+        for i, text in enumerate(difficulties):
+            color = (255, 0, 0) if i == selected else (0, 0, 0)
+            option_text = start_font.render(text, True, color)
+            option_rect = option_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 40))
+            screen.blit(option_text, option_rect)
+
+        tip_text = start_font.render("使用 ↑↓ 選擇, Enter 開始", True, (50, 50, 50))
+        tip_rect = tip_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+        screen.blit(tip_text, tip_rect)
+        
+        pygame.display.update()
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_UP:
+                    selected = (selected - 1) % 3
+                elif event.key == pygame.K_DOWN:
+                    selected = (selected + 1) % 3
+                elif event.key == pygame.K_RETURN:
+                    difficulty = difficulties[selected]
+                    return  # 離開開始畫面
+        
+        clock.tick(30)
+
+
+def choose_player():
+    selected_character = 0
+
+    
+    while True:
+        screen.blit(background, (0, 0))
+        for i, text in enumerate(range(len(player_img_list))):
+            x = WIDTH // 2 - 100 + i * 200
+            y = HEIGHT // 2
+
+            # 畫角色圖片
+            screen.blit(player_img_list[i], (x, y))
+            if i == selected_character:
+                pygame.draw.rect(screen, (255, 0, 0), (x - 5, y - 5, player_img_list[i].get_width() + 10, player_img_list[i].get_height() + 10), 3)
+        pygame.display.update()        
+
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                pygame.quit()
+                sys.exit()
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    selected_character = (selected_character - 1) % 2
+                elif event.key == pygame.K_RIGHT:
+                    selected_character = (selected_character + 1) % 2
+                elif event.key == pygame.K_RETURN:
+                    return selected_character
+
+        clock.tick(30)
+    
+def draw_player(x, y, player_id):
+    screen.blit(player_img_list[player_id], (x, y))
 
 def draw_obstacle(x, y):
     screen.blit(tako_image, (x, y))
@@ -101,13 +179,25 @@ def draw_message():
 score = 0
 running = True
 
+show_start_screen()
+player_id = choose_player()
 # 主迴圈
 while running:
-
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
     screen.blit(background, (0,0))
+
+    if difficulty == "Easy":
+        obstacle_speed = 3
+    elif difficulty == "Normal":
+        obstacle_speed = 5
+    elif difficulty == "Hard":
+        obstacle_speed =7
+
+    
+    
     # 鍵盤控制
     keys = pygame.key.get_pressed()
     if keys[pygame.K_LEFT] and player_x > 0:
@@ -192,7 +282,7 @@ while running:
 
     # 畫出角色、障礙物、信件、血量
     
-    draw_player(player_x, player_y)
+    draw_player(player_x, player_y, player_id)
     draw_HP_icon(HP)
     draw_score()
     draw_message()
