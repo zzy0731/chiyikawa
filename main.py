@@ -6,6 +6,8 @@ from messages import love_messages
 from function import *
 # 初始化
 pygame.init()
+pygame.mixer.init()
+
 
 
 # global variable
@@ -38,7 +40,7 @@ obstacle_speed = 5
 obstacles = []
 
 # 信件參數
-letter_size = 40
+letter_size = 30
 letter_speed = 3
 letters = []
 
@@ -50,13 +52,15 @@ clock = pygame.time.Clock()
 
 # 字型
 # font = pygame.font.SysFont(None, 32)
-font = pygame.font.Font("Fonts/msjh.ttc", 24)#本文主角
+font = pygame.font.Font("Fonts/msjh.ttc", 24)
+
 player_img = pygame.image.load("assets/player.png")
 player_img = pygame.transform.scale(player_img, (player_size, player_size))
-
 lobster_img = pygame.image.load("assets/lobster_resize.png")
+dog_img = pygame.image.load("assets/dog_resize.png")
+youshi_img = pygame.image.load("assets/youshi_resize.png")
 
-player_img_list = [player_img, lobster_img]
+player_img_list = [player_img, lobster_img, dog_img, youshi_img ]
 
 tako_image = pygame.image.load("assets/tako.png")
 tako_image = pygame.transform.scale(tako_image, (obstacle_size, obstacle_size))
@@ -112,17 +116,17 @@ def show_start_screen():
 
 def choose_player():
     selected_character = 0
-
-    
+    n = len(player_img_list)
     while True:
         screen.blit(background, (0, 0))
-        for i, text in enumerate(range(len(player_img_list))):
-            x = WIDTH // 2 - 100 + i * 200
+        for i in range(len(player_img_list)):
+            x = WIDTH // 2 - 200 + i * 100
             y = HEIGHT // 2
 
             # 畫角色圖片
             screen.blit(player_img_list[i], (x, y))
             if i == selected_character:
+
                 pygame.draw.rect(screen, (255, 0, 0), (x - 5, y - 5, player_img_list[i].get_width() + 10, player_img_list[i].get_height() + 10), 3)
         pygame.display.update()        
 
@@ -132,9 +136,9 @@ def choose_player():
                 sys.exit()
             if event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_LEFT:
-                    selected_character = (selected_character - 1) % 2
+                    selected_character = (selected_character - 1) % n
                 elif event.key == pygame.K_RIGHT:
-                    selected_character = (selected_character + 1) % 2
+                    selected_character = (selected_character + 1) % n
                 elif event.key == pygame.K_RETURN:
                     return selected_character
 
@@ -155,7 +159,7 @@ def draw_drop_HP_icon(x,y):
 
 def draw_HP_icon(HP):
     for i in range(HP):
-        screen.blit(HP_icon, (WIDTH//2+i*50, 0))
+        screen.blit(HP_icon, (10 + i * (HP_icon_size + 6), 10))
     
 
 def show_game_over():
@@ -167,7 +171,7 @@ def show_game_over():
 
 def draw_score():
     score_text = font.render(f"Score: {score}", True, (0, 0, 0))
-    screen.blit(score_text, (10, 10))
+    screen.blit(score_text, (WIDTH-200, 10))
 
 def draw_message():
     if current_message:
@@ -181,6 +185,9 @@ running = True
 
 show_start_screen()
 player_id = choose_player()
+pygame.mixer.music.load("music/chiikawa_music.mp3")
+pygame.mixer.music.set_volume(0.3)
+pygame.mixer.music.play(-1) 
 # 主迴圈
 while running:
     for event in pygame.event.get():
@@ -233,6 +240,7 @@ while running:
                 current_time = pygame.time.get_ticks()
                 if current_time - last_collistion_time > cooldown_time:
                     HP += 1
+                    HP = max(5,HP)
                     last_collistion_time = current_time
                 continue  # 不再加入列表 (移除愛心)
                 
