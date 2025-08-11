@@ -52,7 +52,7 @@ clock = pygame.time.Clock()
 
 # 字型
 # font = pygame.font.SysFont(None, 32)
-font = pygame.font.Font("Fonts/msjh.ttc", 24)
+font = pygame.font.Font("Fonts/ChenYuluoyan_v1.ttf", 24)
 
 player_img = pygame.image.load("assets/player.png")
 player_img = pygame.transform.scale(player_img, (player_size, player_size))
@@ -64,6 +64,12 @@ player_img_list = [player_img, lobster_img, dog_img, youshi_img ]
 
 tako_image = pygame.image.load("assets/tako.png")
 tako_image = pygame.transform.scale(tako_image, (obstacle_size, obstacle_size))
+
+ice_cream_image = pygame.image.load("assets/ice_cream.png")
+ice_cream_image = pygame.transform.scale(ice_cream_image, (obstacle_size, obstacle_size))
+
+meat_image = pygame.image.load("assets/meat.png")
+meat_image = pygame.transform.scale(meat_image, (obstacle_size, obstacle_size))
 
 letter_image = pygame.image.load("assets/love_letter.png")
 
@@ -78,7 +84,7 @@ def show_start_screen():
     while True:
         screen.blit(background, (0, 0))
         title_font = pygame.font.Font("Fonts/msjh.ttc", 40)
-        start_font = pygame.font.Font("Fonts/msjh.ttc", 28)
+        system_font = pygame.font.Font("Fonts/msjh.ttc", 14)
         
         title_text = title_font.render("Love Sheep Game", True, (255, 0, 100))
         title_rect = title_text.get_rect(center=(WIDTH // 2, HEIGHT // 4))
@@ -88,12 +94,12 @@ def show_start_screen():
         difficulties = ["Easy", "Normal", "Hard"]
         for i, text in enumerate(difficulties):
             color = (255, 0, 0) if i == selected else (0, 0, 0)
-            option_text = start_font.render(text, True, color)
+            option_text = title_font.render(text, True, color)
             option_rect = option_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 + i * 40))
             screen.blit(option_text, option_rect)
 
-        tip_text = start_font.render("使用 ↑↓ 選擇, Enter 開始", True, (50, 50, 50))
-        tip_rect = tip_text.get_rect(center=(WIDTH // 2, HEIGHT - 50))
+        tip_text = system_font.render("左右閃躲，避開障礙物的同時想辦法獲得最多手寫信，吃愛心增加活下去的機率!", True, (0, 0, 00))
+        tip_rect = tip_text.get_rect(center=(WIDTH // 2, HEIGHT - 400))
         screen.blit(tip_text, tip_rect)
         
         pygame.display.update()
@@ -147,11 +153,14 @@ def choose_player():
 def draw_player(x, y, player_id):
     screen.blit(player_img_list[player_id], (x, y))
 
-def draw_obstacle(x, y):
-    screen.blit(tako_image, (x, y))
+obstacle_list = [tako_image, ice_cream_image, meat_image]
 
-def draw_letter(x, y, text):
+obstacle_id = 0
+def draw_obstacle(x, y, cur_obstacle_id):
+    obstacle_image = obstacle_list[cur_obstacle_id]
+    screen.blit(obstacle_image, (x, y))
 
+def draw_letter(x, y):
     screen.blit(letter_image, (x, y))
 
 def draw_drop_HP_icon(x,y):
@@ -175,7 +184,7 @@ def draw_score():
 
 def draw_message():
     if current_message:
-        message_text = font.render(current_message, True, (255, 0, 100))
+        message_text = font.render(current_message, True, (0, 0, 0))
         rect = message_text.get_rect(center=(WIDTH // 2, HEIGHT // 2 - 50))
         screen.blit(message_text, rect)
 
@@ -185,9 +194,19 @@ running = True
 
 show_start_screen()
 player_id = choose_player()
+#設定背景音樂
 pygame.mixer.music.load("music/chiikawa_music.mp3")
 pygame.mixer.music.set_volume(0.3)
 pygame.mixer.music.play(-1) 
+
+
+hit_sound = pygame.mixer.Sound("music/hurt2.mp3")
+hit_sound.set_volume(0.5)
+get_HP_sound  = pygame.mixer.Sound("music/oola.mp3")
+get_HP_sound.set_volume(0.5)
+get_letter_sound = pygame.mixer.Sound("music/oola_happy.mp3")
+get_letter_sound.set_volume(0.5)
+
 # 主迴圈
 while running:
     for event in pygame.event.get():
@@ -213,9 +232,11 @@ while running:
         player_x += player_speed
 
     # 生出障礙物
+
     if random.random() < 0.02:
+        obstacle_id = (obstacle_id+1)% len(obstacle_list) # obstacle_id 代表現在要畫哪一個obstacle
         obstacle_x = random.randint(0, WIDTH - obstacle_size)
-        obstacles.append([obstacle_x, 0])
+        obstacles.append([obstacle_x, 0, obstacle_id])
 
     # 生出信件
     if random.random() < 0.02:
@@ -239,6 +260,7 @@ while running:
                 player_y + player_size > y):
                 current_time = pygame.time.get_ticks()
                 if current_time - last_collistion_time > cooldown_time:
+                    get_HP_sound.play()
                     HP += 1
                     HP = max(5,HP)
                     last_collistion_time = current_time
@@ -250,16 +272,17 @@ while running:
 
     # 更新障礙物位置
     new_obstacles = []
-    for x, y in obstacles:
+    for x, y, obstacle_id in obstacles:
         y += obstacle_speed
         if y < HEIGHT:
-            new_obstacles.append([x, y])
+            new_obstacles.append([x, y, obstacle_id])
         if (player_x < x + obstacle_size and
             player_x + player_size > x and
             player_y < y + obstacle_size and
             player_y + player_size > y):
             current_time = pygame.time.get_ticks()
-            if current_time - last_collistion_time >cooldown_time:
+            if current_time - last_collistion_time > cooldown_time:
+                hit_sound.play()
                 HP-=1
                 last_collistion_time = current_time
                 if (HP<=0):
@@ -286,6 +309,7 @@ while running:
 
     # 顯示訊息 2 秒後消失
     if current_message and pygame.time.get_ticks() - message_timer > 2000:
+        get_HP_sound.play()
         current_message = ""
 
     # 畫出角色、障礙物、信件、血量
@@ -294,10 +318,10 @@ while running:
     draw_HP_icon(HP)
     draw_score()
     draw_message()
-    for x, y in obstacles:
-        draw_obstacle(x, y)
+    for x, y, cur_obstacle_id in obstacles:
+        draw_obstacle(x, y, cur_obstacle_id)
     for x, y, text in letters:
-        draw_letter(x, y, text)
+        draw_letter(x, y)
     for x,y, in HP_icon_list:
         draw_drop_HP_icon(x,y)
 
