@@ -363,7 +363,7 @@ def play_one_game(player_id):
         letters = new_letters
 
         # 顯示訊息 2 秒後消失（保留你的行為：結束時播一次 get_HP_sound）
-        if current_message and pygame.time.get_ticks() - message_timer > 2000:
+        if current_message and pygame.time.get_ticks() - message_timer > 1500:
             text_idx += 1
             current_message = ""
 
