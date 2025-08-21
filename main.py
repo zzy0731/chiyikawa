@@ -355,7 +355,6 @@ def play_one_game(player_id):
                     player_y < y + letter_size and
                     player_y + player_size > y):
                     current_message = text
-                    text_idx += 1
                     message_timer = pygame.time.get_ticks()
                     score += 10
                     get_letter_sound.play()
@@ -365,7 +364,7 @@ def play_one_game(player_id):
 
         # 顯示訊息 2 秒後消失（保留你的行為：結束時播一次 get_HP_sound）
         if current_message and pygame.time.get_ticks() - message_timer > 2000:
-            get_HP_sound.play()
+            text_idx += 1
             current_message = ""
 
         # 繪製
