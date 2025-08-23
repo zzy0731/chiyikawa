@@ -39,6 +39,9 @@ letter_speed = 3
 
 difficulty = "Normal"  # 預設難度
 
+# 訊息顯示時間
+MESSAGE_DURATION_MS = 2000  # 碰到信件後顯示 2 秒
+
 # 遊戲時鐘
 clock = pygame.time.Clock()
 
@@ -82,13 +85,13 @@ player_y = HEIGHT - player_size - 10
 HP = 1
 score = 0
 obstacles = []
-letters = []
+letters = []          # 每個元素為 [x, y]（不在生成時綁定文字）
 HP_icon_list = []
-current_message = ""
+current_message = ""  # 正在顯示的訊息（碰到信件才設）
 message_timer = 0
 last_collistion_time = 0
-text_idx = 0
-obstacle_id = 0  # 用於輪流切換障礙物造型
+text_idx = 0          # 指向 love_messages 的索引
+obstacle_id = 0       # 用於輪流切換障礙物造型
 
 
 # ------------------ UI 畫面 ------------------
@@ -127,7 +130,7 @@ def show_start_screen():
         )
         tip_rect2 = tip_text2.get_rect(center=(WIDTH // 2, HEIGHT - 380))
         screen.blit(tip_text2, tip_rect2)
-        
+
         pygame.display.update()
 
         for event in pygame.event.get():
@@ -243,12 +246,12 @@ def reset_game_state():
     HP = 1
     score = 0
     obstacles = []
-    letters = []
+    letters = []              # 重設信件清單
     HP_icon_list = []
     last_collistion_time = 0
-    current_message = ""
+    current_message = ""      # 不顯示文字
     message_timer = 0
-    text_idx = 0
+    text_idx = 0              # 從第一段情書開始
     obstacle_id = 0
 
 
@@ -270,12 +273,12 @@ def play_one_game(player_id):
         # 難度調速
         if difficulty == "Easy":
             obstacle_speed_local = 3
-            obstacle_opptunity = obstacle_opptunity = 0.02
+            obstacle_opportunity = 0.02
         elif difficulty == "Normal":
-            obstacle_opptunity = 0.05
+            obstacle_opportunity = 0.05
             obstacle_speed_local = 5
         else:
-            obstacle_opptunity = 0.1
+            obstacle_opportunity = 0.1
             obstacle_speed_local = 7
 
         # 鍵盤控制
@@ -286,16 +289,15 @@ def play_one_game(player_id):
             player_x += player_speed
 
         # 生出障礙物
-        if random.random() < obstacle_opptunity:
+        if random.random() < obstacle_opportunity:
             obstacle_id = (obstacle_id + 1) % len(obstacle_list)
             obstacle_x = random.randint(0, WIDTH - obstacle_size)
             obstacles.append([obstacle_x, 0, obstacle_id])
 
-        # 生出信件
+        # 生出信件（不綁定文字）
         if random.random() < 0.01:
             letter_x = random.randint(0, WIDTH - letter_size)
-            text = select_cur_text(love_messages, text_idx)
-            letters.append([letter_x, 0, text])
+            letters.append([letter_x, 0])
 
         # 生出 HP icon
         if random.random() < 0.01:
@@ -317,8 +319,7 @@ def play_one_game(player_id):
                         get_HP_sound.play()
                         HP = min(HP_MAX, HP + 1)  # 上限 5
                         last_collistion_time = current_time
-                    # 撿到就不加回列表
-                    continue
+                    continue  # 撿到就不加回列表
                 new_HP_icon_list.append([x, y])
         HP_icon_list = new_HP_icon_list
 
@@ -344,26 +345,31 @@ def play_one_game(player_id):
                         return  # 結束本局，回初始畫面
         obstacles = new_obstacles
 
-        # 更新信件
+        # 更新信件（碰到才顯示 love_messages[text_idx]，顯示 2 秒）
         new_letters = []
-        for x, y, text in letters:
+        for x, y in letters:
             y += letter_speed
             if y < HEIGHT:
-                # 撿到加分 + 顯示訊息 + 音效
+                # 撿到加分 + 音效；如果目前沒有在顯示訊息，立刻顯示
                 if (player_x < x + letter_size and
                     player_x + player_size > x and
                     player_y < y + letter_size and
                     player_y + player_size > y):
-                    current_message = text
-                    message_timer = pygame.time.get_ticks()
+
                     score += 10
                     get_letter_sound.play()
+
+                    # 沒有訊息在顯示 → 顯示目前 text_idx 這段
+                    if not current_message:
+                        current_message = select_cur_text(love_messages, text_idx)
+                        message_timer = pygame.time.get_ticks()
+                    # 若正在顯示中，不打斷；這封信仍然視為被撿起（不回 new_letters）
                 else:
-                    new_letters.append([x, y, text])
+                    new_letters.append([x, y])
         letters = new_letters
 
-        # 顯示訊息 2 秒後消失（保留你的行為：結束時播一次 get_HP_sound）
-        if current_message and pygame.time.get_ticks() - message_timer > 1500:
+        # 訊息顯示時間到 → 清空並換下一段（下一次撿信時才會顯示）
+        if current_message and pygame.time.get_ticks() - message_timer > MESSAGE_DURATION_MS:
             text_idx += 1
             current_message = ""
 
@@ -374,7 +380,7 @@ def play_one_game(player_id):
         draw_message()
         for x, y, cur_obstacle_id in obstacles:
             draw_obstacle(x, y, cur_obstacle_id)
-        for x, y, text in letters:
+        for x, y in letters:
             draw_letter(x, y)
         for x, y in HP_icon_list:
             draw_drop_HP_icon(x, y)
